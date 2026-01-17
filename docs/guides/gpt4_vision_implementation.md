@@ -1,10 +1,34 @@
 # GPT-4 Vision Implementation Report
 
-## Executive Summary
+⚠️ **Note:** This document describes the old implementation with `mesh_to_primitives.py`. The current codebase uses `python -m meshconverter.cli` with unified classifiers.
 
-Successfully implemented **GPT-4 Vision mesh classification** to improve shape detection accuracy beyond heuristic bbox ratio methods.
+**See updated guides:**
+- [QUICKSTART.md](../QUICKSTART.md) — Current quick start
+- [GPT4_VISION_GUIDE.md](GPT4_VISION_GUIDE.md) — Current GPT-4 Vision usage
 
-**Key Achievement:** GPT-4 Vision correctly identifies `simple_cylinder.stl` as "cylinder" (95% confidence) while heuristic incorrectly classified it as "box" (75% confidence).
+---
+
+## Current Implementation
+
+The CLI now uses:
+
+```bash
+# GPT-4 Vision
+python -m meshconverter.cli your_mesh.stl --classifier gpt4-vision
+
+# Heuristic
+python -m meshconverter.cli your_mesh.stl --classifier heuristic
+
+# Voxel
+python -m meshconverter.cli your_mesh.stl --classifier voxel
+
+# Compare all
+python -m meshconverter.cli your_mesh.stl --classifier all
+```
+
+---
+
+# Old Implementation Report (Archived)
 
 ---
 
