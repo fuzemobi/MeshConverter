@@ -417,6 +417,117 @@ class MeshDecomposer:
         return assembly
 
 
+def decompose_via_voxelization(
+    mesh: trimesh.Trimesh,
+    voxel_size: float = 1.0,
+    erosion_iterations: int = 0
+) -> List[Dict[str, Any]]:
+    """
+    Separate mesh components using voxelization + morphological operations.
+
+    This method works when components share faces (interlocking geometry).
+
+    Args:
+        mesh: Input trimesh object
+        voxel_size: Voxel grid resolution (mm) - default 1.0mm
+        erosion_iterations: Number of erosion passes to separate components - default 0 (no erosion)
+
+    Returns:
+        List of component dictionaries (same format as decompose())
+    """
+    from scipy import ndimage
+
+    print(f"\n🔲 Voxelizing mesh (voxel_size={voxel_size}mm)...")
+
+    # Step 1: Convert to voxels
+    voxels = mesh.voxelized(pitch=voxel_size)
+    grid = voxels.matrix  # 3D boolean array
+
+    print(f"  Voxel grid: {grid.shape}")
+
+    # Step 2: Morphological erosion (break connections) - optional
+    if erosion_iterations > 0:
+        print(f"  Eroding {erosion_iterations} iterations...")
+        eroded = ndimage.binary_erosion(grid, iterations=erosion_iterations)
+    else:
+        print(f"  No erosion (relying on voxel quantization)")
+        eroded = grid
+
+    # Step 3: Label connected components
+    labeled, n_components = ndimage.label(eroded)
+    print(f"  Found {n_components} components")
+
+    if n_components <= 1:
+        print("  ⚠️  No separation achieved, returning original mesh")
+        # Fall back to original decompose method
+        decomposer = MeshDecomposer()
+        return decomposer.decompose(mesh)
+
+    # Step 4: Process each component
+    components = []
+    for i in range(1, n_components + 1):
+        component_mask = (labeled == i)
+
+        # Dilate back to original size
+        dilated = ndimage.binary_dilation(
+            component_mask,
+            iterations=erosion_iterations
+        )
+
+        # Convert voxels back to mesh
+        # Create new VoxelGrid from boolean array
+        component_voxels = trimesh.voxel.VoxelGrid(
+            encoding=dilated,
+            transform=voxels.transform
+        )
+
+        # Convert to mesh (as boxes)
+        component_mesh = component_voxels.as_boxes()
+
+        # Lower threshold for voxelized meshes (they're naturally smaller)
+        if len(component_mesh.vertices) < 10:
+            continue
+
+        # Analyze component (reuse existing function)
+        analysis = _analyze_component_simple(component_mesh, i-1)
+        components.append(analysis)
+
+    print(f"✅ Voxelization complete: {len(components)} component(s)")
+    return components
+
+
+def _analyze_component_simple(mesh: trimesh.Trimesh, component_id: int) -> Dict[str, Any]:
+    """Helper to analyze a voxelized component"""
+    # Similar to existing _analyze_component but simplified
+    volume = mesh.volume
+    bbox = mesh.bounding_box
+    bbox_volume = bbox.volume if bbox.volume > 0 else 1e-6
+    bbox_ratio = volume / bbox_volume
+
+    # Estimate type
+    if 0.85 <= bbox_ratio <= 1.05:
+        est_type, conf = 'box', 85
+    elif 0.15 <= bbox_ratio < 0.50:
+        est_type, conf = 'box', 75
+    elif 0.35 <= bbox_ratio <= 0.85:
+        est_type, conf = 'cylinder', 70
+    else:
+        est_type, conf = 'complex', 40
+
+    return {
+        'mesh': mesh,
+        'vertices_count': len(mesh.vertices),
+        'faces_count': len(mesh.faces),
+        'volume': volume,
+        'bbox_ratio': bbox_ratio,
+        'center': mesh.centroid.copy(),
+        'estimated_type': est_type,
+        'confidence': conf,
+        'component_id': component_id,
+        'valid': True
+    }
+
+
 def decompose_mesh(mesh: trimesh.Trimesh,
                    spatial_threshold: float = 25.0) -> Dict[str, Any]:
     """

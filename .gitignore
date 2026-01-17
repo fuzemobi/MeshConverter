@@ -36,10 +36,9 @@ output/
 *.ply
 *.off
 
-# But keep example files in parent directory
-!../simple_block.stl
-!../simple_cylinder.stl
-!../sample.stl
+# But keep test fixture files
+!tests/fixtures/*.stl
+!tests/fixtures/*.obj
 
 # Logs
 *.log
@@ -48,5 +47,12 @@ output/
 tmp/
 temp/
 *.tmp
-.claude/
-.github/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Documentation builds
+docs/_build/
+docs/api/_autosummary/

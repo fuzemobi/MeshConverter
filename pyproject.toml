@@ -1,0 +1,137 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "meshconverter"
+version = "2.0.0"
+description = "Convert 3D mesh files to parametric CAD primitives"
+authors = [
+    {name = "Chad Rosenbohm", email = "chad@fuzemobi.com"},
+]
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+keywords = ["mesh", "cad", "stl", "3d", "conversion", "parametric", "cadquery", "voxelization"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Image Processing",
+    "Topic :: Multimedia :: Graphics :: 3D Modeling",
+]
+
+dependencies = [
+    "trimesh>=3.20.0",
+    "numpy>=1.24.0",
+    "scikit-learn>=1.3.0",
+    "scipy>=1.11.0",
+    "cadquery>=2.0.0",
+    "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+vision = [
+    "openai>=1.0.0",
+    "pillow>=10.0.0",
+]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "pytest-mock>=3.10.0",
+    "black>=23.0.0",
+    "pylint>=2.17.0",
+    "mypy>=1.0.0",
+    "isort>=5.12.0",
+]
+all = [
+    "openai>=1.0.0",
+    "pillow>=10.0.0",
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "pytest-mock>=3.10.0",
+    "black>=23.0.0",
+    "pylint>=2.17.0",
+    "mypy>=1.0.0",
+    "isort>=5.12.0",
+]
+
+[project.scripts]
+mc = "meshconverter.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/fuzemobi/MeshConverter"
+Repository = "https://github.com/fuzemobi/MeshConverter"
+Issues = "https://github.com/fuzemobi/MeshConverter/issues"
+
+[tool.setuptools]
+packages = ["meshconverter"]
+
+[tool.black]
+line-length = 100
+target-version = ['py38', 'py39', 'py310', 'py311']
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.git
+  | \.venv
+  | venv
+  | build
+  | dist
+  | __pycache__
+)/
+'''
+
+[tool.pylint.messages_control]
+max-line-length = 100
+disable = [
+    "C0103",  # Invalid name
+    "C0114",  # Missing module docstring
+    "R0913",  # Too many arguments
+]
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --strict-markers"
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+]
+
+[tool.coverage.run]
+source = ["meshconverter"]
+omit = [
+    "*/tests/*",
+    "*/__pycache__/*",
+    "*/venv/*",
+    "*/.venv/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
