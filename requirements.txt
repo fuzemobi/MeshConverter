@@ -26,7 +26,10 @@ black>=23.0.0
 pylint>=2.17.0
 mypy>=1.4.0
 
+# AI features
+openai>=1.0.0
+python-dotenv>=1.0.0
+
 # Optional dependencies
 # matplotlib>=3.7.0  # For visualization
-# pillow>=10.0.0     # For thumbnails
-# openai>=1.0.0      # For AI features (future)
+pillow>=10.0.0       # For image rendering and thumbnails

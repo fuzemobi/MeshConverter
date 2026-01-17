@@ -96,10 +96,15 @@ output/
 | **STEP Export** | 🚧 | Coming soon |
 | **Mesh Simplification** | ✅ | Quadric decimation (preserves shape) |
 | **Hollow Detection** | ✅ | Distinguishes hollow vs. solid shapes |
+| **GPT-4 Vision Classification** | ✅ | AI-powered shape recognition (optional) |
 
 ### 🔍 Shape Classification
 
-MeshConverter uses **bounding box ratio** for robust shape detection:
+MeshConverter supports **two classification methods**:
+
+#### 1. Heuristic Detection (Fast, Free)
+
+Uses **bounding box ratio** for robust shape detection:
 
 ```python
 bbox_ratio = mesh_volume / bounding_box_volume
@@ -111,7 +116,7 @@ if ratio 0.40-0.85: → Cylinder
 if ratio 0.50-0.55: → Sphere
 ```
 
-**Real Example:**
+**Example:**
 ```bash
 $ python mesh_to_primitives.py simple_block.stl
 
@@ -127,6 +132,44 @@ $ python mesh_to_primitives.py simple_block.stl
 
 ✅ Quality Score: 92.3/100
 ```
+
+#### 2. GPT-4 Vision (Accurate, AI-Powered) 🆕
+
+Uses OpenAI's GPT-4 Vision to analyze mesh from multiple angles:
+
+```bash
+# Enable GPT-4 Vision classification
+python mesh_to_primitives.py simple_cylinder.stl --gpt4-vision
+
+🤖 Classifying with GPT-4 Vision...
+  Rendering mesh from 6 angles...
+  ✅ Successfully rendered 6 views
+  Sending to GPT-4 Vision API...
+
+📊 Comparison:
+  Heuristic:    box      (75%)
+  GPT-4 Vision: cylinder (95%)
+
+  ✅ Using GPT-4 Vision classification (higher confidence)
+```
+
+**Key Benefits:**
+- **Higher Accuracy**: Vision-based analysis beats bbox ratio heuristics
+- **Visual Understanding**: Analyzes cross-sections from multiple angles
+- **Edge Case Handling**: Correctly identifies ambiguous shapes
+
+**Requirements:**
+```bash
+# Install dependencies
+pip install openai pillow
+
+# Set API key
+export OPENAI_API_KEY=sk-...
+```
+
+**Cost:** ~$0.06 per mesh (6 views @ $0.01/image)
+
+**Documentation:** [docs/GPT4_VISION_GUIDE.md](docs/GPT4_VISION_GUIDE.md)
 
 ---
 

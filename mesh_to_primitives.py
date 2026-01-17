@@ -15,7 +15,7 @@ import numpy as np
 
 from core.mesh_loader import MeshLoader
 from core.normalizer import MeshNormalizer
-from core.decomposer import decompose_mesh
+from core.decomposer import decompose_mesh, MeshDecomposer
 from core.pattern_matcher import ShapePatternMatcher, BatterySignatureMatcher
 from detection.simple_detector import SimpleDetector
 from detection.ai_detector import AIDetector
@@ -23,12 +23,23 @@ from validation.validator import MeshValidator
 from primitives.box import BoxPrimitive
 from primitives.cylinder import CylinderPrimitive
 
+# GPT-4 Vision classifier (optional)
+try:
+    from core.ai_classifier import GPT4VisionMeshClassifier
+    HAS_GPT4_VISION = True
+except ImportError:
+    HAS_GPT4_VISION = False
+
 
 def convert_mesh(
     input_file: str,
     output_dir: str = None,
     use_ai: bool = True,
-    normalize: bool = True
+    normalize: bool = True,
+    use_voxelization: bool = False,
+    voxel_size: float = 1.0,
+    erosion_iterations: int = 0,
+    use_gpt4_vision: bool = False
 ) -> Dict[str, Any]:
     """
     Convert mesh to primitive shapes.
@@ -38,6 +49,10 @@ def convert_mesh(
         output_dir: Output directory (default: input_file_output/)
         use_ai: Whether to use AI detection
         normalize: Whether to normalize mesh
+        use_voxelization: Whether to use voxelization for decomposition
+        voxel_size: Voxel size in mm (default: 1.0)
+        erosion_iterations: Number of erosion iterations (default: 0)
+        use_gpt4_vision: Whether to use GPT-4 Vision for classification
 
     Returns:
         Results dictionary
@@ -73,8 +88,30 @@ def convert_mesh(
 
     # STEP 1: Try mesh decomposition for composite shapes
     print(f"🔗 Analyzing mesh structure...")
-    decomp_result = decompose_mesh(mesh, spatial_threshold=25.0)
-    n_components = decomp_result['total_components']
+
+    if use_voxelization:
+        from core.decomposer import decompose_via_voxelization
+        components = decompose_via_voxelization(
+            mesh,
+            voxel_size=voxel_size,
+            erosion_iterations=erosion_iterations
+        )
+        # Wrap in same format as decompose_mesh
+        if components:
+            decomposer = MeshDecomposer()
+            assembly = decomposer.estimate_assembly_structure(components)
+            decomp_result = {
+                'components': components,
+                'assembly': assembly,
+                'total_components': len(components)
+            }
+            n_components = len(components)
+        else:
+            decomp_result = None
+            n_components = 0
+    else:
+        decomp_result = decompose_mesh(mesh, spatial_threshold=25.0)
+        n_components = decomp_result['total_components']
     
     if n_components > 1:
         print(f"✅ Multi-component mesh detected: {n_components} components")
@@ -113,12 +150,52 @@ def convert_mesh(
     matcher = ShapePatternMatcher()
     pattern_match, pattern_confidence, pattern_details = matcher.match(mesh)
     print(f"  Pattern Match: {pattern_match} ({pattern_confidence:.0f}%)")
-    
+
     # Check for battery signature
     battery_features = BatterySignatureMatcher.extract_battery_features(mesh)
     if battery_features.get('battery_like'):
         print(f"  🔋 Battery-like signature detected (aspect ratio: {battery_features['aspect_ratio']:.1f})")
     print()
+
+    # GPT-4 Vision classification (optional)
+    if use_gpt4_vision:
+        if not HAS_GPT4_VISION:
+            print("⚠️  GPT-4 Vision not available (missing dependencies)")
+            print("   Install: pip install openai pillow")
+            print()
+        else:
+            import os
+            api_key = os.getenv('OPENAI_API_KEY')
+            if not api_key:
+                print("⚠️  OPENAI_API_KEY not set, skipping GPT-4 Vision classification")
+                print()
+            else:
+                try:
+                    print("="*70)
+                    vision_classifier = GPT4VisionMeshClassifier(api_key=api_key)
+                    vision_result = vision_classifier.classify_mesh(mesh, verbose=True)
+
+                    print(f"\n📊 Comparison:")
+                    print(f"  Heuristic: {shape_type} ({confidence}%)")
+                    print(f"  GPT-4 Vision: {vision_result['shape_type']} ({vision_result['confidence']}%)")
+
+                    # Use vision result if confidence is higher
+                    if vision_result['confidence'] > confidence:
+                        print(f"\n  ✅ Using GPT-4 Vision classification (higher confidence)")
+                        shape_type = vision_result['shape_type']
+                        confidence = vision_result['confidence']
+                        detection_result['method'] = 'gpt4-vision'
+                        detection_result['vision_result'] = vision_result
+                    else:
+                        print(f"\n  ✅ Using heuristic classification (higher confidence)")
+
+                    print("="*70)
+                    print()
+
+                except Exception as e:
+                    print(f"⚠️  GPT-4 Vision classification failed: {e}")
+                    print()
+
 
     # Fit appropriate primitive
     print(f"🔧 Fitting primitive...")
@@ -211,6 +288,14 @@ def main():
     parser.add_argument('-o', '--output', help='Output directory')
     parser.add_argument('--no-ai', action='store_true', help='Disable AI detection')
     parser.add_argument('--no-normalize', action='store_true', help='Disable mesh normalization')
+    parser.add_argument('--voxelize', action='store_true',
+                        help='Use voxelization for decomposition')
+    parser.add_argument('--voxel-size', type=float, default=1.0,
+                        help='Voxel size in mm (default: 1.0)')
+    parser.add_argument('--erosion', type=int, default=0,
+                        help='Erosion iterations for voxelization (default: 0)')
+    parser.add_argument('--gpt4-vision', action='store_true',
+                        help='Use GPT-4 Vision for shape classification (requires OPENAI_API_KEY)')
 
     args = parser.parse_args()
 
@@ -219,7 +304,11 @@ def main():
             args.input_file,
             output_dir=args.output,
             use_ai=not args.no_ai,
-            normalize=not args.no_normalize
+            normalize=not args.no_normalize,
+            use_voxelization=args.voxelize,
+            voxel_size=args.voxel_size,
+            erosion_iterations=args.erosion,
+            use_gpt4_vision=args.gpt4_vision
         )
 
         if result:
