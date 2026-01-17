@@ -1,0 +1,32 @@
+# MeshConverter V2 - Python Dependencies
+# Version: 2.0.0
+# Python: 3.8+
+
+# Core mesh processing
+trimesh>=3.20.0
+numpy>=1.24.0
+scipy>=1.11.0
+
+# Machine learning & analysis
+scikit-learn>=1.3.0
+
+# Mesh simplification
+fast-simplification>=0.1.5
+
+# CAD generation
+cadquery>=2.0.0
+
+# Configuration
+pyyaml>=6.0.0
+
+# Development & Testing
+pytest>=7.4.0
+pytest-cov>=4.1.0
+black>=23.0.0
+pylint>=2.17.0
+mypy>=1.4.0
+
+# Optional dependencies
+# matplotlib>=3.7.0  # For visualization
+# pillow>=10.0.0     # For thumbnails
+# openai>=1.0.0      # For AI features (future)

@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+*.cover
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+output/
+*.stl
+*.step
+*.stp
+*.obj
+*.ply
+*.off
+
+# But keep example files in parent directory
+!../simple_block.stl
+!../simple_cylinder.stl
+!../sample.stl
+
+# Logs
+*.log
+
+# Temporary files
+tmp/
+temp/
+*.tmp

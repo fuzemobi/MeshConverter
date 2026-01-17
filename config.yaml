@@ -1,0 +1,29 @@
+# Mesh to Primitives Configuration
+# Version: 1.0
+
+# Mesh Preprocessing
+preprocessing:
+  repair:
+    fix_normals: true
+    fill_holes: true
+    remove_duplicates: true
+
+  normalization:
+    enabled: true
+    method: "isotropic"  # or "anisotropic"
+    target_range: [-1.0, 1.0]
+
+# Primitive Detection
+detection:
+  method: "heuristic"  # Start simple, upgrade to RANSAC later
+
+  bbox_ratio_thresholds:
+    solid_box: [0.95, 1.05]
+    hollow_box: [0.15, 0.40]
+    cylinder: [0.40, 0.85]
+    sphere: [0.50, 0.55]
+
+# Validation
+validation:
+  max_volume_error: 0.05  # 5%
+  min_quality_score: 80   # 0-100
