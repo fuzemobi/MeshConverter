@@ -20,7 +20,10 @@
       "Bash(tree:*)",
       "Bash(timeout 10s python3:*)",
       "Bash(git worktree:*)",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Bash(gh repo view:*)",
+      "Bash(gh repo create:*)",
+      "Bash(git push:*)"
     ],
     "defaultMode": "bypassPermissions"
   }
