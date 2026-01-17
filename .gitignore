@@ -48,3 +48,5 @@ output/
 tmp/
 temp/
 *.tmp
+.claude/
+.github/

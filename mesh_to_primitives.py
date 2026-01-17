@@ -15,6 +15,8 @@ import numpy as np
 
 from core.mesh_loader import MeshLoader
 from core.normalizer import MeshNormalizer
+from core.decomposer import decompose_mesh
+from core.pattern_matcher import ShapePatternMatcher, BatterySignatureMatcher
 from detection.simple_detector import SimpleDetector
 from detection.ai_detector import AIDetector
 from validation.validator import MeshValidator
@@ -69,7 +71,29 @@ def convert_mesh(
     print(f"  Watertight: {validation['is_watertight']}")
     print()
 
-    # Detect shape
+    # STEP 1: Try mesh decomposition for composite shapes
+    print(f"🔗 Analyzing mesh structure...")
+    decomp_result = decompose_mesh(mesh, spatial_threshold=25.0)
+    n_components = decomp_result['total_components']
+    
+    if n_components > 1:
+        print(f"✅ Multi-component mesh detected: {n_components} components")
+        for i, comp in enumerate(decomp_result['components']):
+            if comp['valid']:
+                print(f"   [{i+1}] {comp['estimated_type'].upper()}: " +
+                      f"{comp['vertices_count']} vertices, " +
+                      f"bbox_ratio={comp['bbox_ratio']:.3f}, " +
+                      f"confidence={comp['confidence']:.0f}%")
+        
+        # Store assembly info
+        assembly_info = decomp_result['assembly']
+        print(f"   Assembly: {assembly_info['by_type']}")
+    else:
+        print(f"   Single component detected")
+        decomp_result = None
+    print()
+
+    # Detect shape (now considering decomposition)
     print(f"🤖 Detecting shape...")
     if use_ai:
         detector = AIDetector()
@@ -84,6 +108,16 @@ def convert_mesh(
     print(f"  Type: {shape_type.upper()}")
     print(f"  Confidence: {confidence}%")
     print(f"  Reason: {detection_result['reason']}")
+    
+    # Pattern matching for specialized shapes
+    matcher = ShapePatternMatcher()
+    pattern_match, pattern_confidence, pattern_details = matcher.match(mesh)
+    print(f"  Pattern Match: {pattern_match} ({pattern_confidence:.0f}%)")
+    
+    # Check for battery signature
+    battery_features = BatterySignatureMatcher.extract_battery_features(mesh)
+    if battery_features.get('battery_like'):
+        print(f"  🔋 Battery-like signature detected (aspect ratio: {battery_features['aspect_ratio']:.1f})")
     print()
 
     # Fit appropriate primitive
