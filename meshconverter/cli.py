@@ -15,6 +15,7 @@ import argparse
 import os
 from pathlib import Path
 import trimesh
+import numpy as np
 import yaml
 import json
 from typing import Dict, Any, Optional, List
@@ -352,6 +353,34 @@ def generate_parametric_stl(
             primitive = BoxPrimitive()
             primitive.fit(mesh)
             generated = primitive.generate_mesh()
+        elif shape_type == 'assembly':
+            # Reconstruct clean boxes from detected_boxes list (layer-slicing output)
+            detected_boxes = classification.get('detected_boxes', [])
+            if detected_boxes:
+                meshes = []
+                for box_idx, box_data in enumerate(detected_boxes):
+                    try:
+                        # Extract box parameters
+                        center = np.array(box_data.get('center', [0, 0, 0]))
+                        dims = box_data.get('dimensions', [10, 10, 10])
+                        
+                        # Create clean box directly
+                        box_mesh = trimesh.creation.box(extents=dims)
+                        # Translate to correct center
+                        box_mesh.apply_translation(center - box_mesh.centroid)
+                        meshes.append(box_mesh)
+                    except Exception as e:
+                        print(f"  ⚠️  Could not generate box {box_idx}: {e}")
+                
+                if meshes:
+                    # Combine all boxes into single mesh
+                    generated = trimesh.util.concatenate(meshes)
+                else:
+                    print("⚠️  No valid boxes found, using simplified original")
+                    generated = mesh
+            else:
+                print("⚠️  No box data in assembly, using simplified original")
+                generated = mesh
         else:
             # For other shapes, use fast-simplification if available
             try:
@@ -542,6 +571,56 @@ if IS_HOLLOW:
 # Export to STEP for CAD software
 result.exportStep("{output_dir.name}_parametric.step")
 print(f"✅ Generated: {{LENGTH}} × {{WIDTH}} × {{HEIGHT}} mm box")
+'''
+        
+        elif shape_type == 'assembly':
+            # Generate script with multiple boxes
+            detected_boxes = classification.get('detected_boxes', [])
+            box_definitions = "\n".join([
+                f"# Box {i}: center={[round(b['center'][j], 2) for j in range(3)]}, dims={[round(b['dimensions'][j], 2) for j in range(3)]}"
+                for i, b in enumerate(detected_boxes)
+            ])
+            
+            # Build BOXES list with proper formatting and commas
+            boxes_list_items = []
+            for i, b in enumerate(detected_boxes):
+                box_str = f"    {{'center': ({b['center'][0]:.2f}, {b['center'][1]:.2f}, {b['center'][2]:.2f}), 'dimensions': ({b['dimensions'][0]:.2f}, {b['dimensions'][1]:.2f}, {b['dimensions'][2]:.2f})}}"
+                boxes_list_items.append(box_str)
+            boxes_list_str = ",\n".join(boxes_list_items)
+            
+            script = f'''#!/usr/bin/env python3
+"""
+Auto-generated parametric assembly from MeshConverter.
+
+Generated: {datetime.now().isoformat()}
+Original mesh: {mesh.vertices.shape[0]} vertices, {mesh.faces.shape[0]} faces
+Detected shape: ASSEMBLY ({len(detected_boxes)} boxes)
+
+Detected boxes:
+{box_definitions}
+"""
+
+import cadquery as cq
+
+# Individual box definitions (edit to customize)
+BOXES = [
+{boxes_list_str}
+]
+
+# Create assembly
+result = cq.Workplane("XY")
+for i, box in enumerate(BOXES):
+    center = box['center']
+    dims = box['dimensions']
+    # Create individual box at its center location
+    box_wp = (cq.Workplane("XY")
+        .box(dims[0], dims[1], dims[2])
+    )
+    result = result.union(box_wp.translate(center))
+
+# Export to STEP for CAD software
+result.exportStep("{output_dir.name}_parametric.step")
+print(f"✅ Generated: Assembly with {{len(BOXES)}} boxes")
 '''
         
         else:
