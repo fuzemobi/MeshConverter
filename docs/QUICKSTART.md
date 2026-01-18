@@ -32,9 +32,43 @@ Done! ✅
 python -m meshconverter.cli your_mesh.stl -o output/
 ```
 
-**Output:**
-- Classification results printed to console
-- Metadata saved to `*_metadata.json`
+**Automatic Output (Everything Generated):**
+1. **`your_mesh_parametric.stl`** — Simplified mesh ready for CAD (1000-5000 faces)
+2. **`your_mesh_metadata.json`** — Classification results with detected parameters
+3. **`your_mesh_cadquery.py`** — Editable Python script (for STEP export or customization)
+
+**How it works:**
+- Mesh is automatically analyzed
+- Shape type detected (cylinder, box, sphere, complex)
+- Simplified mesh generated with clean geometry
+- Script template created with extracted parameters
+- **Ready to use immediately!** Just open the STL in FreeCAD or CAD software
+
+**Example output:**
+```
+💾 Saving outputs to: output/your_mesh
+  ✅ Metadata: output/your_mesh/your_mesh_metadata.json
+  ✅ STL: output/your_mesh/your_mesh_parametric.stl
+  ✅ Script: output/your_mesh/your_mesh_cadquery.py
+
+📌 Results:
+  Shape: CYLINDER
+  Confidence: 85%
+  Method: voxel
+
+📁 Files ready to use:
+  • metadata: Classification results + parameters
+  • stl: Production-ready simplified mesh
+  • script: Customizable parametric template
+```
+
+**Optional: Generate STEP for Parametric CAD:**
+```bash
+# If you want a parametric model in FreeCAD/Fusion360:
+cd output/your_mesh
+python your_mesh_cadquery.py
+# Creates: your_mesh_parametric.step
+```
 
 ### Convert with Heuristic Classifier (Fast, No API)
 
