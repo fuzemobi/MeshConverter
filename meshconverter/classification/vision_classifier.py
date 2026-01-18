@@ -202,7 +202,7 @@ Be precise and analytical. Return ONLY valid JSON, no other text."""
 
         try:
             response = self.client.chat.completions.create(
-                model="gpt-4-vision-preview",
+                model="gpt-4o",  # Updated from deprecated gpt-4-vision-preview
                 messages=[{"role": "user", "content": content}],
                 max_tokens=500,
                 temperature=0.0  # Deterministic
