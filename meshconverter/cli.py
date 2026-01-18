@@ -25,6 +25,7 @@ from meshconverter.classification import (
     classify_mesh_with_voxel,
     classify_mesh_with_vision
 )
+from meshconverter.reconstruction.layer_analyzer import analyze_mesh_layers
 
 # Import core modules
 from core.mesh_loader import MeshLoader
@@ -102,6 +103,45 @@ def classify_heuristic(mesh: trimesh.Trimesh, config: Dict) -> Dict[str, Any]:
     return {
         'shape_type': shape_type,
         'confidence': confidence,
+        'reasoning': reasoning,
+        'bbox_ratio': bbox_ratio,
+        'method': 'heuristic'
+    }
+
+
+def classify_layer_slicing(mesh: trimesh.Trimesh, layer_height: float = 2.0) -> Dict[str, Any]:
+    """
+    Classify using layer-slicing reconstruction method.
+
+    Args:
+        mesh: Input trimesh
+        layer_height: Height of each layer slice (mm)
+
+    Returns:
+        Classification result
+    """
+    print("\n📋 Classifying with layer-slicing...")
+
+    result = analyze_mesh_layers(mesh, layer_height=layer_height, verbose=True)
+
+    # Convert to standard classification format
+    n_boxes = len(result.get('detected_boxes', []))
+
+    if n_boxes == 0:
+        result['shape_type'] = 'unknown'
+        result['confidence'] = 0
+    elif n_boxes == 1:
+        result['shape_type'] = 'box'
+        result['confidence'] = 90
+    else:
+        result['shape_type'] = 'assembly'
+        result['confidence'] = 85
+
+    return result
+
+    return {
+        'shape_type': shape_type,
+        'confidence': confidence,
         'n_components': 1,
         'reasoning': reasoning,
         'bbox_ratio': bbox_ratio,
@@ -114,17 +154,19 @@ def classify_mesh(
     method: str,
     config: Dict[str, Any],
     voxel_size: float = 1.0,
-    erosion_iterations: int = 0
+    erosion_iterations: int = 0,
+    layer_height: float = 2.0
 ) -> Dict[str, Any]:
     """
     Classify mesh using specified method.
 
     Args:
         mesh: Input trimesh
-        method: Classification method ('voxel', 'gpt4-vision', 'heuristic', 'all')
+        method: Classification method ('voxel', 'gpt4-vision', 'heuristic', 'layer-slicing', 'all')
         config: Configuration dictionary
         voxel_size: Voxel size for voxel method
         erosion_iterations: Erosion iterations for voxel method
+        layer_height: Layer height for layer-slicing method
 
     Returns:
         Classification result or list of results if method='all'
@@ -136,6 +178,9 @@ def classify_mesh(
             erosion_iterations=erosion_iterations,
             verbose=True
         )
+
+    elif method == 'layer-slicing':
+        return classify_layer_slicing(mesh, layer_height=layer_height)
 
     elif method == 'gpt4-vision':
         # Check for API key
@@ -162,6 +207,13 @@ def classify_mesh(
             results.append(heuristic_result)
         except Exception as e:
             print(f"⚠️  Heuristic failed: {e}")
+
+        # Layer-slicing
+        try:
+            layer_result = classify_layer_slicing(mesh, layer_height=layer_height)
+            results.append(layer_result)
+        except Exception as e:
+            print(f"⚠️  Layer-slicing failed: {e}")
 
         # Voxel
         try:
@@ -621,7 +673,7 @@ For more information: https://github.com/medtracket/meshconverter
     parser.add_argument(
         '-c', '--classifier',
         type=str,
-        choices=['voxel', 'gpt4-vision', 'heuristic', 'all'],
+        choices=['voxel', 'gpt4-vision', 'heuristic', 'layer-slicing', 'all'],
         default='voxel',
         help='Classification method (default: voxel)'
     )
@@ -638,6 +690,13 @@ For more information: https://github.com/medtracket/meshconverter
         type=int,
         default=0,
         help='Erosion iterations for voxel classifier (default: 0)'
+    )
+
+    parser.add_argument(
+        '--layer-height',
+        type=float,
+        default=2.0,
+        help='Layer height in mm for layer-slicing classifier (default: 2.0)'
     )
 
     parser.add_argument(
@@ -689,7 +748,8 @@ For more information: https://github.com/medtracket/meshconverter
             method=args.classifier,
             config=config,
             voxel_size=args.voxel_size,
-            erosion_iterations=args.erosion
+            erosion_iterations=args.erosion,
+            layer_height=args.layer_height
         )
 
         # Extract best result if multiple methods were run
