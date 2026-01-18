@@ -331,16 +331,16 @@ save_metadata(output_path + '.json')
 
 ```bash
 # Basic usage (all phases enabled)
-python convert_mesh_allshapes.py input.stl
+python scripts/convert_mesh_allshapes.py input.stl
 
 # Disable vision phases (faster, no API costs)
-python convert_mesh_allshapes.py input.stl --no-vision
+python scripts/convert_mesh_allshapes.py input.stl --no-vision
 
 # Custom layer height for layer-slicing
-python convert_mesh_allshapes.py input.stl --layer-height 1.0
+python scripts/convert_mesh_allshapes.py input.stl --layer-height 1.0
 
 # Quiet mode
-python convert_mesh_allshapes.py input.stl -q
+python scripts/convert_mesh_allshapes.py input.stl -q
 ```
 
 ### Python API
@@ -489,7 +489,7 @@ python test_multiview_validation.py
 
 ```bash
 # Test complete pipeline
-python convert_mesh_allshapes.py tests/samples/simple_cylinder.stl
+python scripts/convert_mesh_allshapes.py tests/samples/simple_cylinder.stl
 
 # Expected:
 # - Shape: CYLINDER

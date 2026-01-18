@@ -1,0 +1,183 @@
+# MeshConverter v2 - Project Organization Rules
+
+## File Organization Standards
+
+### Documentation Files
+**Rule**: ALL documentation files (*.md) MUST be placed in `./docs/` directory
+**Exceptions**:
+- README.md (project root only)
+- CLAUDE.md (project root only - project standards)
+- .clinerules (this file)
+
+**Examples**:
+- ✅ `./docs/PHASE_INTEGRATION_GUIDE.md`
+- ✅ `./docs/RESEARCH_SUMMARY.md`
+- ✅ `./docs/API_REFERENCE.md`
+- ❌ `./CONVERSION_SUMMARY.md` (should be in docs/)
+- ❌ `./ALL_SHAPES_GUIDE.md` (should be in docs/)
+
+### Script Files
+**Rule**: ALL standalone scripts (*.py, *.sh) MUST be placed in `./scripts/` directory
+**Exceptions**:
+- Main entry points that are part of the package API
+- Test files (go in ./tests/)
+- Package modules (go in ./meshconverter/, ./primitives/, etc.)
+
+**Examples**:
+- ✅ `./scripts/convert_mesh.py`
+- ✅ `./scripts/convert_mesh_allshapes.py`
+- ✅ `./scripts/batch_convert.sh`
+- ❌ `./convert_mesh.py` (should be in scripts/)
+- ❌ `./test_multiview_validation.py` (should be in tests/)
+
+### Test Files
+**Rule**: ALL test files (test_*.py, *_test.py) MUST be placed in `./tests/` directory
+**Structure**:
+```
+./tests/
+├── test_*.py           # Unit tests
+├── integration/        # Integration tests
+├── samples/            # Test data files (*.stl, etc.)
+└── fixtures/           # Test fixtures and mocks
+```
+
+**Examples**:
+- ✅ `./tests/test_vision_layer_analysis.py`
+- ✅ `./tests/test_multiview_validation.py`
+- ✅ `./tests/integration/test_complete_pipeline.py`
+- ✅ `./tests/samples/simple_cylinder.stl`
+- ❌ `./test_something.py` (should be in tests/)
+
+### Package Modules
+**Rule**: Core library code goes in organized package directories
+
+**Structure**:
+```
+./meshconverter/          # Main package
+├── reconstruction/       # Reconstruction algorithms
+├── validation/          # Validation modules
+├── classification/      # Classification modules
+└── convert.py           # Package-level utilities
+
+./primitives/            # Primitive shapes package
+├── base.py
+├── box.py
+├── cylinder.py
+└── ...
+
+./core/                  # Core utilities (if needed)
+```
+
+## When Creating New Files
+
+### Ask yourself:
+1. **Is it documentation?** → `./docs/`
+2. **Is it a standalone script?** → `./scripts/`
+3. **Is it a test?** → `./tests/`
+4. **Is it a package module?** → Appropriate package directory
+
+### Before committing:
+1. Verify all files are in correct directories
+2. Update directory README.md if adding new categories
+3. Run organization check: `find . -maxdepth 1 -name "*.md" ! -name "README.md" ! -name "CLAUDE.md"`
+
+## Migration Tasks
+
+### Current files that need reorganization:
+```bash
+# Move to ./docs/
+mv ./ALL_SHAPES_GUIDE.md ./docs/
+mv ./CONVERSION_SUMMARY.md ./docs/
+mv ./CONVERT_GUIDE.md ./docs/
+mv ./MULTI_SEGMENT_RECONSTRUCTION_PLAN.md ./docs/
+mv ./PHASE_INTEGRATION_GUIDE.md ./docs/
+mv ./RESEARCH_SUMMARY.md ./docs/
+
+# Move to ./scripts/
+mv ./convert_mesh.py ./scripts/
+mv ./convert_mesh_allshapes.py ./scripts/
+
+# Move to ./tests/
+mv ./test_multiview_validation.py ./tests/
+```
+
+## Directory Structure (Target)
+
+```
+MeshConverter_v2/
+├── README.md                    # Project overview
+├── CLAUDE.md                    # Project standards (this overrides global)
+├── .clinerules                  # This file
+├── requirements.txt
+├── setup.py
+│
+├── docs/                        # ALL documentation
+│   ├── README.md                # Documentation index
+│   ├── API_REFERENCE.md
+│   ├── ARCHITECTURE.md
+│   ├── PHASE_INTEGRATION_GUIDE.md
+│   ├── RESEARCH_SUMMARY.md
+│   ├── MULTI_SEGMENT_RECONSTRUCTION_PLAN.md
+│   ├── ALL_SHAPES_GUIDE.md
+│   ├── CONVERSION_SUMMARY.md
+│   ├── CONVERT_GUIDE.md
+│   └── [legacy]/                # Deprecated docs
+│
+├── scripts/                     # ALL standalone scripts
+│   ├── README.md                # Script usage guide
+│   ├── convert_mesh.py
+│   ├── convert_mesh_allshapes.py
+│   ├── batch_convert.sh
+│   └── utilities/               # Script utilities
+│
+├── tests/                       # ALL tests
+│   ├── README.md                # Testing guide
+│   ├── test_vision_layer_analysis.py
+│   ├── test_multiview_validation.py
+│   ├── test_primitives.py
+│   ├── integration/             # Integration tests
+│   ├── samples/                 # Test STL files
+│   │   ├── simple_cylinder.stl
+│   │   └── simple_block.stl
+│   └── fixtures/                # Test fixtures
+│
+├── meshconverter/               # Main package
+│   ├── __init__.py
+│   ├── reconstruction/
+│   ├── validation/
+│   ├── classification/
+│   └── convert.py
+│
+├── primitives/                  # Primitives package
+│   ├── __init__.py
+│   ├── base.py
+│   ├── box.py
+│   ├── cylinder.py
+│   ├── sphere.py
+│   └── cone.py
+│
+└── output/                      # Generated outputs (gitignored)
+```
+
+## Enforcement
+
+**Claude Code MUST**:
+1. Check file type before creating
+2. Place file in correct directory
+3. Update directory README.md when adding new categories
+4. Suggest reorganization if files are misplaced
+
+**Before ANY commit**:
+1. Verify file organization
+2. Move misplaced files
+3. Update affected imports/paths
+4. Test that scripts still work after moves
+
+## Benefits
+
+✅ **Clear organization**: Know where everything belongs
+✅ **Easy navigation**: Find files quickly
+✅ **Professional structure**: Industry-standard layout
+✅ **Scalability**: Easy to add new files
+✅ **Maintainability**: Logical grouping
+✅ **Onboarding**: New developers understand structure immediately

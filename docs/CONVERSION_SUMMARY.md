@@ -47,7 +47,7 @@ A complete, intelligent mesh-to-CAD conversion system that:
 
 ```bash
 # Convert with AI analysis (recommended)
-python convert_mesh.py your_scan.stl
+python scripts/convert_mesh.py your_scan.stl
 
 # That's it! Outputs:
 # - your_scan_optimized.stl (clean primitive)
@@ -58,16 +58,16 @@ python convert_mesh.py your_scan.stl
 
 ```bash
 # Without vision (free, faster)
-python convert_mesh.py scan.stl --no-vision
+python scripts/convert_mesh.py scan.stl --no-vision
 
 # Custom output path
-python convert_mesh.py input.stl -o clean.stl
+python scripts/convert_mesh.py input.stl -o clean.stl
 
 # More thorough analysis
-python convert_mesh.py complex.stl --vision-layers 10
+python scripts/convert_mesh.py complex.stl --vision-layers 10
 
 # Fine layer slicing
-python convert_mesh.py detailed.stl --layer-height 1.0
+python scripts/convert_mesh.py detailed.stl --layer-height 1.0
 ```
 
 ---
@@ -406,7 +406,7 @@ pip install -r requirements.txt
 export OPENAI_API_KEY='sk-your-key'
 
 # 2. Convert (every mesh)
-python convert_mesh.py your_scan.stl
+python scripts/convert_mesh.py your_scan.stl
 
 # 3. Use the output
 # - Import `your_scan_optimized.stl` into CAD software
@@ -427,14 +427,14 @@ print(f"Quality: {result['metrics']['quality_score']}/100")
 ```bash
 # Batch processing
 for file in scans/*.stl; do
-    python convert_mesh.py "$file"
+    python scripts/convert_mesh.py "$file"
 done
 ```
 
 ```yaml
 # CI/CD (GitHub Actions)
 - name: Convert meshes
-  run: python convert_mesh.py part.stl
+  run: python scripts/convert_mesh.py part.stl
   env:
     OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 ```

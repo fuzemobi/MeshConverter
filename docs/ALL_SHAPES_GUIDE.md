@@ -34,13 +34,13 @@ Output: Clean optimized mesh
 
 ```bash
 # Test ALL shapes and auto-select best
-python convert_mesh_allshapes.py your_scan.stl
+python scripts/convert_mesh_allshapes.py your_scan.stl
 
 # With vision guidance (recommended)
-python convert_mesh_allshapes.py your_scan.stl --vision-layers 5
+python scripts/convert_mesh_allshapes.py your_scan.stl --vision-layers 5
 
 # Fast mode (no vision, just quality-based)
-python convert_mesh_allshapes.py your_scan.stl --no-vision
+python scripts/convert_mesh_allshapes.py your_scan.stl --no-vision
 ```
 
 ---
@@ -225,13 +225,13 @@ else:
 ### 1. **Unknown Shapes**
 ```bash
 # Let the system figure it out
-python convert_mesh_allshapes.py mystery_part.stl
+python scripts/convert_mesh_allshapes.py mystery_part.stl
 ```
 
 ### 2. **Quality Validation**
 ```bash
 # See how well each shape fits
-python convert_mesh_allshapes.py part.stl
+python scripts/convert_mesh_allshapes.py part.stl
 # Check metadata for all quality scores
 cat part_optimized.json
 ```
@@ -239,14 +239,14 @@ cat part_optimized.json
 ### 3. **Medical Device Validation**
 ```bash
 # Full traceability with vision + all-shapes
-python convert_mesh_allshapes.py implant.stl --vision-layers 10
+python scripts/convert_mesh_allshapes.py implant.stl --vision-layers 10
 ```
 
 ### 4. **Batch Processing**
 ```bash
 # Process all files
 for f in scans/*.stl; do
-    python convert_mesh_allshapes.py "$f" --no-vision
+    python scripts/convert_mesh_allshapes.py "$f" --no-vision
 done
 ```
 
@@ -278,18 +278,18 @@ done
 
 ```bash
 # All options
-python convert_mesh_allshapes.py input.stl \
+python scripts/convert_mesh_allshapes.py input.stl \
   --vision-layers 10 \        # More thorough vision
   --layer-height 1.0 \        # Finer layer slicing
   -o custom_output.stl        # Custom output path
 
 # Fast mode (skip vision, assemblies)
-python convert_mesh_allshapes.py input.stl \
+python scripts/convert_mesh_allshapes.py input.stl \
   --no-vision \
   --no-layer-slicing
 
 # Quiet mode (no output)
-python convert_mesh_allshapes.py input.stl -q
+python scripts/convert_mesh_allshapes.py input.stl -q
 ```
 
 ---
@@ -352,7 +352,7 @@ A: Not in allshapes mode - that defeats the purpose! Use the original `convert_m
 
 **Try it:**
 ```bash
-python convert_mesh_allshapes.py your_scan.stl
+python scripts/convert_mesh_allshapes.py your_scan.stl
 ```
 
 ---

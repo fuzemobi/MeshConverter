@@ -23,16 +23,16 @@ export OPENAI_API_KEY='sk-your-key-here'
 
 ```bash
 # Convert with full AI analysis (recommended)
-python convert_mesh.py your_scan.stl
+python scripts/convert_mesh.py your_scan.stl
 
 # Convert without vision (faster, free)
-python convert_mesh.py your_scan.stl --no-vision
+python scripts/convert_mesh.py your_scan.stl --no-vision
 
 # Specify output path
-python convert_mesh.py input.stl -o output_clean.stl
+python scripts/convert_mesh.py input.stl -o output_clean.stl
 
 # Thorough analysis (more layers)
-python convert_mesh.py input.stl --vision-layers 10
+python scripts/convert_mesh.py input.stl --vision-layers 10
 ```
 
 ---
@@ -128,7 +128,7 @@ OUTPUT: Clean parametric STL + metadata JSON
 ## 🔧 Command-Line Options
 
 ```bash
-python convert_mesh.py [OPTIONS] input.stl
+python scripts/convert_mesh.py [OPTIONS] input.stl
 
 Required:
   input.stl              Input STL mesh file
@@ -142,10 +142,10 @@ Optional:
   -q, --quiet            Suppress output messages
 
 Examples:
-  python convert_mesh.py scan.stl
-  python convert_mesh.py scan.stl --no-vision
-  python convert_mesh.py scan.stl --vision-layers 3 -o clean.stl
-  python convert_mesh.py complex.stl --layer-height 1.0
+  python scripts/convert_mesh.py scan.stl
+  python scripts/convert_mesh.py scan.stl --no-vision
+  python scripts/convert_mesh.py scan.stl --vision-layers 3 -o clean.stl
+  python scripts/convert_mesh.py complex.stl --layer-height 1.0
 ```
 
 ---
@@ -283,26 +283,26 @@ export OPENAI_API_KEY='sk-your-key-here'
 
 ```bash
 # Quick prototyping (fast, cheap)
-python convert_mesh.py scan.stl --vision-layers 3
+python scripts/convert_mesh.py scan.stl --vision-layers 3
 
 # Standard production use (recommended)
-python convert_mesh.py scan.stl --vision-layers 5
+python scripts/convert_mesh.py scan.stl --vision-layers 5
 
 # Medical device validation (thorough)
-python convert_mesh.py scan.stl --vision-layers 10
+python scripts/convert_mesh.py scan.stl --vision-layers 10
 ```
 
 ### 2. **Optimize Layer Height**
 
 ```bash
 # Coarse objects (large, simple shapes)
-python convert_mesh.py large_box.stl --layer-height 5.0
+python scripts/convert_mesh.py large_box.stl --layer-height 5.0
 
 # Standard objects
-python convert_mesh.py part.stl --layer-height 2.0
+python scripts/convert_mesh.py part.stl --layer-height 2.0
 
 # Fine details (small features, thin walls)
-python convert_mesh.py tiny_part.stl --layer-height 0.5
+python scripts/convert_mesh.py tiny_part.stl --layer-height 0.5
 ```
 
 ### 3. **When to Use Vision vs. Heuristic**
@@ -365,7 +365,7 @@ else:
 # Process all STL files in directory
 for file in *.stl; do
     echo "Converting $file..."
-    python convert_mesh.py "$file" --vision-layers 3
+    python scripts/convert_mesh.py "$file" --vision-layers 3
 done
 ```
 
@@ -392,7 +392,7 @@ jobs:
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
-          python convert_mesh.py scans/part.stl
+          python scripts/convert_mesh.py scans/part.stl
 ```
 
 ---
@@ -465,7 +465,7 @@ MIT License - See [LICENSE](LICENSE) file
 **Ready to convert your meshes?**
 
 ```bash
-python convert_mesh.py your_scan.stl
+python scripts/convert_mesh.py your_scan.stl
 ```
 
 **Questions?** Open an issue on GitHub.
