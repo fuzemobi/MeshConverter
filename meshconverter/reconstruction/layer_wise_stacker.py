@@ -47,7 +47,7 @@ class LayerWiseStacker:
         size_similarity_threshold: float = 0.90,
         centroid_tolerance_mm: float = 2.0,
         use_cv_validation: bool = True,
-        cv_confidence_threshold: float = 0.70,
+        cv_confidence_threshold: float = 0.70,  # Use 0.70 for quality; lower causes issues with hollow structures
         verbose: bool = True
     ):
         """
@@ -84,7 +84,15 @@ class LayerWiseStacker:
 
     def detect_primary_axis(self, mesh: trimesh.Trimesh) -> Tuple[np.ndarray, str]:
         """
-        Detect primary axis of mesh (usually Z for vertical stacking).
+        Detect primary axis of mesh for slicing.
+
+        Strategy: Slice along the SHORTEST axis to maximize cross-section area.
+        This gives the most representative 2D profiles.
+
+        For a 60×40×20mm box:
+        - Slicing along Z (shortest, 20mm) → 60×40mm cross-sections ✓
+        - Slicing along Y (40mm) → 60×20mm cross-sections
+        - Slicing along X (longest, 60mm) → 40×20mm cross-sections
 
         Args:
             mesh: Input mesh
@@ -94,7 +102,9 @@ class LayerWiseStacker:
         """
         # Use bounding box dimensions
         extents = mesh.extents
-        max_extent_idx = extents.argmax()
+
+        # CRITICAL FIX: Use SHORTEST axis (argmin) for maximum cross-section
+        min_extent_idx = extents.argmin()
 
         axis_names = ['X', 'Y', 'Z']
         axis_vectors = [
@@ -103,7 +113,7 @@ class LayerWiseStacker:
             np.array([0, 0, 1])
         ]
 
-        return axis_vectors[max_extent_idx], axis_names[max_extent_idx]
+        return axis_vectors[min_extent_idx], axis_names[min_extent_idx]
 
     def slice_mesh(
         self,
@@ -586,6 +596,58 @@ class LayerWiseStacker:
         else:
             return False, "split_segments", merge_score
 
+    def _filter_boundary_artifacts(self, layers: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Remove tiny artifact layers at mesh boundaries.
+
+        These occur at the start/end of slicing where the plane just barely
+        intersects the mesh, creating unrealistically small cross-sections.
+
+        Args:
+            layers: List of layer dictionaries
+
+        Returns:
+            Filtered list without boundary artifacts
+        """
+        if len(layers) < 5:
+            return layers  # Too few layers to filter
+
+        # Calculate median area (representative of actual cross-section)
+        areas = [layer['area'] for layer in layers]
+        median_area = np.median(areas)
+
+        if median_area == 0:
+            return layers  # Can't filter
+
+        # Find first stable layer (area > 10% of median)
+        start_idx = 0
+        threshold = 0.10 * median_area
+
+        for i, layer in enumerate(layers):
+            if layer['area'] > threshold:
+                start_idx = i
+                break
+
+        # Find last stable layer (area > 10% of median)
+        end_idx = len(layers) - 1
+        for i in range(len(layers) - 1, -1, -1):
+            if layers[i]['area'] > threshold:
+                end_idx = i
+                break
+
+        # Only filter if we're actually removing artifacts (not cutting too much)
+        if start_idx > len(layers) * 0.2 or (len(layers) - end_idx - 1) > len(layers) * 0.2:
+            # Would remove >20% of layers, probably not artifacts
+            return layers
+
+        filtered = layers[start_idx:end_idx + 1]
+
+        if self.verbose and (start_idx > 0 or end_idx < len(layers) - 1):
+            print(f"  🔧 Filtered boundary artifacts: removed {start_idx} start + {len(layers) - end_idx - 1} end layers")
+            print(f"     Median area: {median_area:.1f}mm², threshold: {threshold:.1f}mm²")
+
+        return filtered if len(filtered) > 0 else layers
+
     def group_similar_layers(
         self,
         layers: List[Dict[str, Any]],
@@ -604,19 +666,26 @@ class LayerWiseStacker:
         if len(layers) == 0:
             return []
 
+        # CRITICAL FIX: Remove startup/shutdown artifacts
+        # These are tiny layers at the beginning/end caused by mesh boundaries
+        filtered_layers = self._filter_boundary_artifacts(layers)
+
+        if len(filtered_layers) == 0:
+            return []
+
         segments = []
-        current_segment_layers = [layers[0]]
+        current_segment_layers = [filtered_layers[0]]
 
         # Classify first layer
         shape_hint = None
         if vision_results and len(vision_results) > 0:
             shape_hint = vision_results[0].get('shape_detected')
 
-        first_primitive = self.classify_and_fit_2d(layers[0]['polygon'], shape_hint)
+        first_primitive = self.classify_and_fit_2d(filtered_layers[0]['polygon'], shape_hint)
 
-        for i in range(1, len(layers)):
-            prev_layer = layers[i-1]
-            curr_layer = layers[i]
+        for i in range(1, len(filtered_layers)):
+            prev_layer = filtered_layers[i-1]
+            curr_layer = filtered_layers[i]
 
             # Get vision hint for current layer
             shape_hint_curr = None
