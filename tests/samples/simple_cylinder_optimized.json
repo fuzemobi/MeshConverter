@@ -1,0 +1,25 @@
+{
+  "timestamp": "2026-01-18T10:17:09.455381",
+  "input": "./tests/samples/simple_cylinder.stl",
+  "output": {
+    "vertices": 330,
+    "faces": 640,
+    "volume": 7515.777967538214
+  },
+  "shape": "multi-segment",
+  "confidence": 85.0,
+  "method": "layer-slicing",
+  "original": {
+    "vertices": 10533,
+    "faces": 21070,
+    "volume": 7884.227401309862
+  },
+  "metrics": {
+    "volume_error_pct": 4.673247168269585,
+    "quality_score": 95,
+    "face_reduction_pct": 96.96250593260561
+  },
+  "all_tested_shapes": [],
+  "outlier_removal": null,
+  "validation": null
+}

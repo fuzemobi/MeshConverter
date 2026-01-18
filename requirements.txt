@@ -30,6 +30,11 @@ mypy>=1.4.0
 openai>=1.0.0
 python-dotenv>=1.0.0
 
-# Optional dependencies
-# matplotlib>=3.7.0  # For visualization
+# Visualization & validation
+matplotlib>=3.7.0    # For visualization and visual comparisons
 pillow>=10.0.0       # For image rendering and thumbnails
+
+# Computer vision validation (Phase 4A - CV enhancement)
+opencv-python>=4.8.0       # OpenCV for image-based validation
+scikit-image>=0.21.0       # SSIM and image metrics
+mapbox-earcut>=1.0.0       # Polygon triangulation for extrusion

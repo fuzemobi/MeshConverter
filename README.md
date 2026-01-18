@@ -93,6 +93,8 @@ output/
 | **Box Detection** | ✅ | Oriented bounding box (OBB) fitting |
 | **Cylinder Detection** | ✅ | PCA-based axis detection + radius fitting |
 | **Sphere Detection** | ✅ | Least-squares sphere fitting |
+| **Multi-Segment Reconstruction** | ✅ | Layer-wise primitive stacking for complex assemblies |
+| **CV-Enhanced Validation** | ✅ | Computer vision metrics (SSIM, IoU, Hu moments) |
 | **Mesh Simplification** | ✅ | Quadric decimation (preserves shape) |
 | **Hollow Detection** | ✅ | Distinguishes hollow vs. solid shapes |
 | **Quality Validation** | ✅ | Volume error, fit accuracy, quality scores |
@@ -182,6 +184,47 @@ export OPENAI_API_KEY=sk-...
 ```
 
 **Cost:** ~$0.01-0.05 per mesh (optional feature)
+
+#### 3. Multi-Segment Reconstruction (Layer-Wise Stacking) 🆕
+
+For **complex assemblies** with multiple geometric sections (e.g., batteries, sensors, multi-part devices):
+
+```bash
+$ python -m meshconverter.reconstruction.layer_wise_stacker battery.stl
+
+🏗️  Layer-Wise Primitive Stacking...
+  Slicing mesh into 114 layers (0.5mm spacing)
+  Detecting 6 distinct segments
+
+📊 Segment Breakdown:
+  Segment 1: CYLINDER (R=2.5mm, H=1.5mm) - Bottom terminal
+  Segment 2: CYLINDER (R=9.5mm, H=1.0mm) - Negative cap
+  Segment 3: CYLINDER (R=9.0mm, H=50mm) - Battery body
+  Segment 4: CYLINDER (R=9.5mm, H=1.0mm) - Positive cap
+  Segment 5: CYLINDER (R=3.5mm, H=2.0mm) - Positive bump
+  Segment 6: CYLINDER (R=2.5mm, H=1.5mm) - Top terminal
+
+✅ Reconstruction Complete:
+  Quality Score: 93/100
+  Volume Error: 6.57%
+  CV Validation: PASSED (confidence: 0.85)
+```
+
+**Key Features:**
+- **Layer-wise slicing** - Analyzes cross-sections at regular intervals
+- **2D primitive fitting** - Detects circles, rectangles, ellipses per layer
+- **Fuzzy grouping** - Intelligently merges similar layers into segments
+- **CV validation** - Uses SSIM, IoU, and Hu moments to validate fits
+- **Automatic fallback** - Uses polygon extrusion for low-confidence primitives
+
+**CV Enhancement (Phase 4A):**
+- **SSIM (Structural Similarity)** - Compares rendered shapes (0-1 scale)
+- **IoU (Intersection over Union)** - Measures area overlap
+- **Hu Moments** - Rotation/scale invariant contour matching
+- **Combined confidence** = 0.4×SSIM + 0.3×Contour + 0.3×IoU
+- **Automatic strategy selection** - Uses primitives for high confidence (>0.70), polygon extrusion for low confidence
+
+See [docs/PHASE_4A_CV_ENHANCEMENT.md](docs/PHASE_4A_CV_ENHANCEMENT.md) for full technical details.
 
 ---
 
@@ -761,11 +804,19 @@ python meshconverter/cli.py your_scan.stl --no-train
 
 ## 🚧 Roadmap
 
+### v2.1.0 (2026-01-18) - CV Enhancement ✅
+- [x] **Multi-segment reconstruction** - Layer-wise primitive stacking
+- [x] **CV validation** - SSIM, IoU, Hu moments for quality metrics
+- [x] **Automatic strategy selection** - Primitives vs polygon extrusion
+- [x] **Visual comparison tools** - Side-by-side reconstruction analysis
+- [x] **Improved hollow detection** - CV-based confidence scoring
+- [x] **Iterative segment merging** - Reduced over-segmentation by 77%
+
 ### v1.1 (Next Release)
 - [ ] Improved sphere detection accuracy
-- [ ] Multi-primitive decomposition (detect assemblies)
 - [ ] STEP file export
 - [ ] Visual quality preview images
+- [ ] Integration of LPS into main CLI workflow
 
 ### v1.2 (Near-term)
 - [ ] Real-time mesh analysis in web interface
@@ -818,6 +869,6 @@ Contributions welcome! Please:
 
 **Built for the MedTrackET medical device tracking platform**
 
-**Status:** Production-ready for boxes and cylinders. Sphere support available. AI classification optional.
+**Status:** Production-ready for boxes and cylinders. Multi-segment reconstruction available (Phase 4A). Sphere support available. AI classification optional.
 
-**Version:** 1.0.0 | Last Updated: 2026-01-17
+**Version:** 2.1.0 | Last Updated: 2026-01-18

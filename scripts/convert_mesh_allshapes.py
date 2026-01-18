@@ -14,7 +14,7 @@ import sys
 from pathlib import Path
 
 # Add project root to path
-project_root = Path(__file__).parent
+project_root = Path(__file__).parent.parent  # Go up one level from scripts/ to project root
 sys.path.insert(0, str(project_root))
 
 import trimesh
@@ -31,6 +31,7 @@ from primitives.sphere import SpherePrimitive
 from primitives.cone import ConePrimitive
 from meshconverter.reconstruction.layer_analyzer import analyze_mesh_layers
 from meshconverter.reconstruction.outlier_removal import smart_outlier_removal
+from meshconverter.reconstruction.layer_wise_stacker import LayerWiseStacker
 from meshconverter.validation.multiview_validator import validate_reconstruction
 
 
@@ -233,6 +234,65 @@ def analyze_with_vision(
         return None
 
 
+def reconstruct_layerwise_multi_segment(
+    mesh: trimesh.Trimesh,
+    layer_height: float = 0.5,
+    vision_results: Optional[List[Dict]] = None,
+    verbose: bool = True
+) -> Dict[str, Any]:
+    """
+    Reconstruct mesh using Layer-Wise Primitive Stacking (LPS).
+
+    This is the Phase 4A multi-segment reconstruction approach that:
+    1. Slices mesh into layers
+    2. Fits 2D primitives to each layer
+    3. Groups similar layers into segments using fuzzy logic
+    4. Extrudes segments to 3D primitives
+    5. Combines into final reconstruction
+
+    Args:
+        mesh: Input mesh
+        layer_height: Distance between slices (mm)
+        vision_results: Optional vision analysis results
+        verbose: Print progress
+
+    Returns:
+        Result dictionary with reconstructed mesh and metadata
+    """
+    if verbose:
+        print("\n🏗️  Using Layer-Wise Primitive Stacking (LPS)...")
+
+    stacker = LayerWiseStacker(
+        layer_height=layer_height,
+        min_segment_height=0.5,
+        verbose=verbose
+    )
+
+    result = stacker.reconstruct(mesh, vision_results)
+
+    if not result['success']:
+        return {
+            'shape': 'multi-segment',
+            'quality_score': 0,
+            'confidence': 0,
+            'method': 'layer-slicing',
+            'error': result.get('error', 'Unknown error'),
+            'mesh': None
+        }
+
+    # Format result for convert() compatibility
+    return {
+        'shape': 'multi-segment',
+        'quality_score': result['quality_score'],
+        'confidence': 85,  # Fixed confidence for LPS
+        'method': 'layer-slicing',
+        'mesh': result['reconstructed_mesh'],
+        'num_segments': result['num_segments'],
+        'segments': result['segments'],
+        'primitive': None  # LPS doesn't have a single primitive
+    }
+
+
 def select_best_shape(
     all_results: List[Dict],
     vision_result: Optional[Dict] = None,
@@ -310,10 +370,11 @@ def select_best_shape(
 def convert(
     input_path: str,
     output_path: Optional[str] = None,
+    classifier: str = 'single-primitive',
     use_vision: bool = True,
     n_vision_layers: int = 5,
     use_layer_slicing: bool = True,
-    layer_height: float = 2.0,
+    layer_height: float = 0.5,
     verbose: bool = True
 ) -> Dict[str, Any]:
     """
@@ -322,10 +383,11 @@ def convert(
     Args:
         input_path: Input STL
         output_path: Output STL (default: <input>_optimized.stl)
+        classifier: Classifier type ('single-primitive' or 'layer-slicing')
         use_vision: Enable GPT-4o vision
         n_vision_layers: Vision sample layers
-        use_layer_slicing: Enable assembly detection
-        layer_height: Layer height (mm)
+        use_layer_slicing: Enable assembly detection (for single-primitive mode)
+        layer_height: Layer height (mm) for layer-slicing classifier
         verbose: Print progress
 
     Returns:
@@ -333,7 +395,7 @@ def convert(
     """
     if verbose:
         print("\n" + "="*80)
-        print("🔷 MeshConverter v2.1 - All-Shapes Evaluation")
+        print(f"🔷 MeshConverter v2.1 - Classifier: {classifier.upper()}")
         print("="*80)
         print(f"Input: {input_path}")
 
@@ -398,22 +460,39 @@ def convert(
                 print(f"  ⚠️  Outlier removal failed: {e}")
             cleaned_mesh = mesh  # Fallback to original
 
-    # Layer-slicing
-    layer_result = None
-    if use_layer_slicing:
-        try:
-            if verbose:
-                print(f"\n📋 Layer-slicing (height={layer_height}mm)...")
-            layer_result = analyze_mesh_layers(cleaned_mesh, layer_height, verbose)
-        except Exception as e:
-            if verbose:
-                print(f"  ⚠️  Failed: {e}")
+    # Branch based on classifier type
+    all_results = []  # Initialize for metadata
+    if classifier == 'layer-slicing':
+        # Use Layer-Wise Primitive Stacking (LPS) for multi-segment reconstruction
+        if verbose:
+            print(f"\n🏗️  Using LAYER-SLICING classifier (Phase 4A)")
 
-    # TEST ALL SHAPES (on cleaned mesh)
-    all_results = test_all_primitives(cleaned_mesh, verbose)
+        vision_layer_results = vision_result.get('layer_results', []) if vision_result else None
+        best = reconstruct_layerwise_multi_segment(
+            cleaned_mesh,
+            layer_height=layer_height,
+            vision_results=vision_layer_results,
+            verbose=verbose
+        )
 
-    # Select best
-    best = select_best_shape(all_results, vision_result, layer_result, verbose)
+    else:
+        # Default: single-primitive classification
+        # Layer-slicing (for assembly detection)
+        layer_result = None
+        if use_layer_slicing:
+            try:
+                if verbose:
+                    print(f"\n📋 Layer-slicing (height={layer_height}mm)...")
+                layer_result = analyze_mesh_layers(cleaned_mesh, layer_height, verbose)
+            except Exception as e:
+                if verbose:
+                    print(f"  ⚠️  Failed: {e}")
+
+        # TEST ALL SHAPES (on cleaned mesh)
+        all_results = test_all_primitives(cleaned_mesh, verbose)
+
+        # Select best
+        best = select_best_shape(all_results, vision_result, layer_result, verbose)
 
     # Handle assembly case
     if best['shape'] == 'assembly':
@@ -569,14 +648,36 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(
-        description="Convert 3D mesh by testing ALL primitive shapes"
+        description="Convert 3D mesh by testing ALL primitive shapes",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Classifier Options:
+  single-primitive    Test all shapes (box, cylinder, sphere, cone) and select best fit (default)
+  layer-slicing       Multi-segment reconstruction using Layer-Wise Primitive Stacking (Phase 4A)
+
+Examples:
+  # Single-primitive mode (default)
+  python convert_mesh_allshapes.py input.stl
+
+  # Multi-segment reconstruction
+  python convert_mesh_allshapes.py input.stl --classifier layer-slicing
+
+  # Multi-segment with custom layer height
+  python convert_mesh_allshapes.py battery.stl --classifier layer-slicing --layer-height 0.5
+        """
     )
     parser.add_argument('input', help='Input STL file')
     parser.add_argument('-o', '--output', help='Output STL')
+    parser.add_argument('--classifier',
+                        choices=['single-primitive', 'layer-slicing'],
+                        default='single-primitive',
+                        help='Classifier type (default: single-primitive)')
     parser.add_argument('--no-vision', action='store_true', help='Disable vision')
     parser.add_argument('--vision-layers', type=int, default=5, help='Vision layers (default: 5)')
-    parser.add_argument('--no-layer-slicing', action='store_true', help='Disable layer-slicing')
-    parser.add_argument('--layer-height', type=float, default=2.0, help='Layer height (default: 2.0)')
+    parser.add_argument('--no-layer-slicing', action='store_true',
+                        help='Disable assembly detection (single-primitive mode only)')
+    parser.add_argument('--layer-height', type=float, default=0.5,
+                        help='Layer height in mm (default: 0.5)')
     parser.add_argument('-q', '--quiet', action='store_true', help='Quiet mode')
 
     args = parser.parse_args()
@@ -584,6 +685,7 @@ if __name__ == "__main__":
     result = convert(
         input_path=args.input,
         output_path=args.output,
+        classifier=args.classifier,
         use_vision=not args.no_vision,
         n_vision_layers=args.vision_layers,
         use_layer_slicing=not args.no_layer_slicing,
