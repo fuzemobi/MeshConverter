@@ -8,6 +8,14 @@ Uses voxel grids and morphological operations to separate components.
 import trimesh
 import numpy as np
 from typing import Dict, Any, List, Optional, Tuple
+import sys
+from pathlib import Path
+
+# Add project root to path for imports
+project_root = Path(__file__).parent.parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
 from core.decomposer import decompose_via_voxelization
 from detection.simple_detector import SimpleDetector
 from scipy import ndimage
