@@ -7,8 +7,10 @@ Uses voxel grids and morphological operations to separate components.
 
 import trimesh
 import numpy as np
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Tuple
 from core.decomposer import decompose_via_voxelization
+from detection.simple_detector import SimpleDetector
+from scipy import ndimage
 
 
 class VoxelMeshClassifier:
@@ -52,6 +54,7 @@ class VoxelMeshClassifier:
                 'n_components': int,
                 'reasoning': str,
                 'components': List[Dict],  # Component details
+                'component_meshes': List[trimesh.Trimesh],  # Individual meshes
                 'method': 'voxel'
             }
         """
@@ -72,24 +75,50 @@ class VoxelMeshClassifier:
                 'n_components': 0,
                 'reasoning': 'Voxelization produced no valid components',
                 'components': [],
+                'component_meshes': [],
                 'method': 'voxel'
             }
 
-        # Analyze components
+        # Extract individual meshes and classify each
         n_components = len(components)
+        component_meshes = [comp['mesh'] for comp in components]
 
+        # Classify each component independently
+        detector = SimpleDetector()
+        component_classifications = []
+        
+        for i, comp_mesh in enumerate(component_meshes):
+            try:
+                # Classify individual component
+                classification = detector.classify(comp_mesh, verbose=False)
+                component_classifications.append(classification)
+                
+                if verbose:
+                    comp_type = classification.get('shape_type', 'unknown')
+                    conf = classification.get('confidence', 0)
+                    print(f"  Component {i+1}: {comp_type} ({conf}%)")
+            except Exception as e:
+                if verbose:
+                    print(f"  Component {i+1}: Classification error - {e}")
+                component_classifications.append({'shape_type': 'unknown', 'confidence': 0})
+
+        # Determine overall shape type
         if n_components == 1:
-            # Single component - classify based on bbox_ratio
+            # Single component - use its classification
             comp = components[0]
-            shape_type = comp.get('estimated_type', 'complex')
-            confidence = int(comp.get('confidence', 50))
-            reasoning = f"Single component detected as {shape_type}"
+            shape_type = component_classifications[0].get('shape_type', 'complex')
+            confidence = component_classifications[0].get('confidence', 50)
+            reasoning = f"Single voxelized component: {shape_type}"
         else:
             # Multiple components
-            shape_type = 'complex'
+            shape_type = 'assembly'
             confidence = 85
-            types = [c.get('estimated_type', 'unknown') for c in components]
-            reasoning = f"Multi-component assembly: {', '.join(types)}"
+            types = [c.get('shape_type', 'unknown') for c in component_classifications]
+            type_counts = {}
+            for t in types:
+                type_counts[t] = type_counts.get(t, 0) + 1
+            type_summary = ', '.join([f"{count}× {shape}" for shape, count in sorted(type_counts.items())])
+            reasoning = f"Multi-component assembly ({n_components} parts): {type_summary}"
 
         if verbose:
             print(f"  ✅ Classification: {shape_type} ({confidence}%)")
@@ -102,6 +131,8 @@ class VoxelMeshClassifier:
             'n_components': n_components,
             'reasoning': reasoning,
             'components': components,
+            'component_meshes': component_meshes,
+            'component_classifications': component_classifications,
             'method': 'voxel'
         }
 
